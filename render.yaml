@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: todo-rollback-demo
+    runtime: node
+    rootDir: app
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: APP_NAME
+        value: todo-rollback-demo

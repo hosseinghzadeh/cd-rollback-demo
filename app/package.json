@@ -1,0 +1,13 @@
+{
+  "name": "todo-rollback-demo",
+  "version": "1.0.0",
+  "description": "Minimal to-do app for CD rollback demo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test ../test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
