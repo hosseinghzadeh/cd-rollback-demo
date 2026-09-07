@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Repo: [nalin431/DevOps_ToDo_RollbackDemo](https://github.com/nalin431/DevOps_ToDo_RollbackDemo) (pushed to GitHub; Render service and secrets setup still pending — see TODO.md).
+
 ## Commands
 
 Run from the `app/` directory:

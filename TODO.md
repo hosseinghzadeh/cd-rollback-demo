@@ -7,14 +7,14 @@
   - Server **throws at boot** if `APP_NAME` is unset — verified locally (this is the deliberate failure mode for the demo).
   - `/todos` (GET/POST) and `/todos/:id/toggle` — in-memory list, resets on restart.
 - `test/todo.test.js` — 2 unit tests on `todo.js` logic only (`addTodo`, `toggleTodo`). Run with `npm test` from `app/`. **Passing.**
-- `.github/workflows/ci.yml` — runs `npm test` on push/PR to `main`. Not yet run on GitHub (no commits pushed yet).
+- `.github/workflows/ci.yml` — runs `npm test` on push/PR to `main`. Repo is now pushed to GitHub ([nalin431/DevOps_ToDo_RollbackDemo](https://github.com/nalin431/DevOps_ToDo_RollbackDemo)) — confirm this workflow actually ran green on the push.
 - `.github/workflows/deploy.yml` — polls Render for deploy status, hits live `/health`, and on failure calls Render's rollback API + disables `autoDeploy`. Written against Render's real API docs (endpoints, request/response shapes, auth) but **not yet tested against a real Render service**.
 - `render.yaml` — Render Blueprint for the service (rootDir `app/`, env var `APP_NAME`).
 
 ## What still needs to happen before the demo
 
-1. **Create the Render service.**
-   - Push this repo to GitHub (if not already) and connect it to Render, or apply `render.yaml` as a Blueprint.
+1. **Create the Render service.** (repo is already pushed to GitHub — done)
+   - Connect the GitHub repo to Render, or apply `render.yaml` as a Blueprint.
    - Confirm the service deploys successfully with `APP_NAME` set (e.g. `todo-rollback-demo`).
    - Note the live URL (e.g. `https://todo-rollback-demo.onrender.com`).
 
