@@ -2,6 +2,10 @@ const path = require("path");
 const express = require("express");
 const { addTodo, toggleTodo } = require("./todo");
 
+if (!process.env.APP_NAME) {
+  throw new Error("APP_NAME environment variable is required");
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -9,17 +13,7 @@ app.use(express.static(path.join(__dirname, "public")));
 let todos = [];
 
 app.get("/health", (req, res) => {
-  if (!process.env.APP_NAME) {
-    return res.status(503).json({
-      status: "unhealthy",
-      reason: "APP_NAME environment variable is missing",
-    });
-  }
-
-  res.status(200).json({
-    status: "ok",
-    app: process.env.APP_NAME,
-  });
+  res.status(200).json({ status: "ok", app: process.env.APP_NAME });
 });
 
 app.get("/todos", (req, res) => {
