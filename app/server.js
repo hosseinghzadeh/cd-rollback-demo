@@ -9,10 +9,10 @@ app.use(express.static(path.join(__dirname, "public")));
 let todos = [];
 
 app.get("/health", (req, res) => {
-  if (!process.env.APP_NAME) {
-    return res.status(500).json({ status: "error", message: "APP_NAME not configured" });
+  if (!process.env.APP_NAME_V2) {
+    return res.status(500).json({ status: "error", message: "APP_NAME_V2 not configured" });
   }
-  res.status(200).json({ status: "ok", app: process.env.APP_NAME });
+  res.status(200).json({ status: "ok", app: process.env.APP_NAME_V2 });
 });
 
 app.get("/todos", (req, res) => {
