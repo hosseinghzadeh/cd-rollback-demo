@@ -46,8 +46,10 @@ jobs:
             echo "Deploy ID: $DEPLOY_ID"
             echo "Deploy status: $STATUS"
 
+            echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
+
             if [ "$STATUS" = "live" ]; then
-              echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
+              echo "deployment_succeeded=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
@@ -55,17 +57,20 @@ jobs:
                [ "$STATUS" = "update_failed" ] || \
                [ "$STATUS" = "canceled" ]; then
               echo "Render deployment failed: $STATUS"
-              exit 1
+              echo "deployment_succeeded=false" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
 
             sleep 10
           done
 
           echo "Timed out waiting for deployment."
-          exit 1
+          echo "deployment_succeeded=false" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Health check
         id: healthcheck
+        if: steps.deploy.outputs.deployment_succeeded == 'true'
         run: |
           echo "Checking $APP_URL/health"
 
@@ -84,9 +89,12 @@ jobs:
           echo "healthy=false" >> "$GITHUB_OUTPUT"
 
       - name: Roll back to previous live deploy
-        if: steps.healthcheck.outputs.healthy != 'true'
+        if: |
+          steps.deploy.outputs.deployment_succeeded != 'true' ||
+          steps.healthcheck.outputs.healthy != 'true'
         run: |
-          echo "Health check failed. Starting automatic rollback..."
+          echo "Deployment or health check failed."
+          echo "Starting automatic rollback..."
 
           CURRENT_DEPLOY_ID="${{ steps.deploy.outputs.deploy_id }}"
 
@@ -125,4 +133,6 @@ jobs:
 
           echo
           echo "Automatic rollback triggered."
+          echo "Auto-deploy has been disabled until the failure is investigated."
+
           exit 1
