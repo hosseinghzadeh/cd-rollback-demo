@@ -34,5 +34,5 @@ app.post("/todos/:id/toggle", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`${process.env.APP_NAME} listening on port ${PORT}`);
+  console.log(`${process.env.APP_NAME} is listening on port ${PORT}`);
 });
