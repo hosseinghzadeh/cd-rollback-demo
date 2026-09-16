@@ -114,7 +114,7 @@ jobs:
 
           echo "Rolling back to deploy $LAST_GOOD_ID"
 
-          curl -sf -X POST \
+          curl -sS -i -X POST \
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Content-Type: application/json" \
             -d "{\"deployId\":\"$LAST_GOOD_ID\"}" \
