@@ -6,10 +6,6 @@ if (!process.env.APP_NAME) {
   throw new Error("APP_NAME environment variable is required");
 }
 
-// if (!process.env.APP_NAME_V2) {
-//   throw new Error("APP_NAME_V2 environment variable is required");
-// }
-
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
