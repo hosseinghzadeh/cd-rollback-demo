@@ -2,8 +2,12 @@ const path = require("path");
 const express = require("express");
 const { addTodo, toggleTodo } = require("./todo");
 
-if (!process.env.APP_NAME) {
-  throw new Error("APP_NAME environment variable is required");
+// if (!process.env.APP_NAME) {
+//   throw new Error("APP_NAME environment variable is required");
+// }
+
+if (!process.env.APP_NAME_V2) {
+  throw new Error("APP_NAME_V2 environment variable is required");
 }
 
 const app = express();
