@@ -7,132 +7,66 @@ on:
 jobs:
   verify-and-rollback:
     runs-on: ubuntu-latest
-
     env:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
       APP_URL: ${{ secrets.APP_URL }}
-
     steps:
-      - name: Wait for current commit to deploy
-        id: deploy
+      - name: Wait for Render deploy to finish
         run: |
-          echo "Waiting for Render deployment for commit $GITHUB_SHA"
-
-          DEPLOY_ID=""
-          STATUS=""
-
           for i in $(seq 1 30); do
-            RESPONSE=$(curl -sf \
-              -H "Authorization: Bearer $RENDER_API_KEY" \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=20")
-
-            DEPLOY_ID=$(echo "$RESPONSE" | jq -r \
-              --arg SHA "$GITHUB_SHA" \
-              '.[] | select(.deploy.commit.id == $SHA) | .deploy.id' \
-              | head -n 1)
-
-            STATUS=$(echo "$RESPONSE" | jq -r \
-              --arg SHA "$GITHUB_SHA" \
-              '.[] | select(.deploy.commit.id == $SHA) | .deploy.status' \
-              | head -n 1)
-
-            if [ -z "$DEPLOY_ID" ]; then
-              echo "Render has not started this deployment yet..."
-              sleep 10
-              continue
-            fi
-
-            echo "Deploy ID: $DEPLOY_ID"
+            STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=1" \
+              | jq -r '.[0].deploy.status')
             echo "Deploy status: $STATUS"
-
-            echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
-
             if [ "$STATUS" = "live" ]; then
-              echo "deployment_succeeded=true" >> "$GITHUB_OUTPUT"
-              exit 0
+              break
             fi
-
-            if [ "$STATUS" = "build_failed" ] || \
-               [ "$STATUS" = "update_failed" ] || \
-               [ "$STATUS" = "canceled" ]; then
-              echo "Render deployment failed: $STATUS"
-              echo "deployment_succeeded=false" >> "$GITHUB_OUTPUT"
-              exit 0
+            if [ "$STATUS" = "build_failed" ] || [ "$STATUS" = "update_failed" ] || [ "$STATUS" = "canceled" ]; then
+              echo "Deploy failed outright: $STATUS"
+              exit 1
             fi
-
             sleep 10
           done
 
-          echo "Timed out waiting for deployment."
-          echo "deployment_succeeded=false" >> "$GITHUB_OUTPUT"
-          exit 0
-
       - name: Health check
         id: healthcheck
-        if: steps.deploy.outputs.deployment_succeeded == 'true'
         run: |
-          echo "Checking $APP_URL/health"
-
           for i in $(seq 1 10); do
             if curl -sf "$APP_URL/health"; then
-              echo
-              echo "Health check passed."
               echo "healthy=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-
-            echo "Health check failed. Retrying..."
             sleep 5
           done
-
           echo "healthy=false" >> "$GITHUB_OUTPUT"
 
-      - name: Roll back to previous live deploy
-        if: |
-          steps.deploy.outputs.deployment_succeeded != 'true' ||
-          steps.healthcheck.outputs.healthy != 'true'
+      - name: Roll back to last known-good deploy
+        if: steps.healthcheck.outputs.healthy != 'true'
         run: |
-          echo "Deployment or health check failed."
-          echo "Starting automatic rollback..."
+          echo "Health check failed. Rolling back..."
 
-          CURRENT_DEPLOY_ID="${{ steps.deploy.outputs.deploy_id }}"
-
-          RESPONSE=$(curl -sf \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?status=live&limit=20")
-
-          LAST_GOOD_ID=$(echo "$RESPONSE" | jq -r \
-            --arg CURRENT "$CURRENT_DEPLOY_ID" \
-            '.[] | select(.deploy.id != $CURRENT) | .deploy.id' \
-            | head -n 1)
+          LAST_GOOD_ID=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?status=live&limit=2" \
+            | jq -r '.[1].deploy.id')
 
           if [ -z "$LAST_GOOD_ID" ] || [ "$LAST_GOOD_ID" = "null" ]; then
-            echo "Could not find a previous live deployment."
+            echo "Could not find a previous healthy deploy to roll back to."
             exit 1
           fi
 
           echo "Rolling back to deploy $LAST_GOOD_ID"
-
-          curl -sS -i -X POST \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
+          curl -s -X POST -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Content-Type: application/json" \
-            -d "{\"deployId\":\"$LAST_GOOD_ID\"}" \
+            -d "{\"deployId\": \"$LAST_GOOD_ID\"}" \
             "https://api.render.com/v1/services/$RENDER_SERVICE_ID/rollback"
 
-          echo
-          echo "Rollback requested successfully."
-
-          echo "Disabling auto-deploy to prevent the bad commit from deploying again."
-
-          curl -sf -X PATCH \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
+          echo "Disabling autoDeploy to prevent the bad commit from redeploying"
+          curl -s -X PATCH -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Content-Type: application/json" \
-            -d '{"autoDeploy":"no"}' \
+            -d '{"autoDeploy": "no"}' \
             "https://api.render.com/v1/services/$RENDER_SERVICE_ID"
 
-          echo
-          echo "Automatic rollback triggered."
-          echo "Auto-deploy has been disabled until the failure is investigated."
-
+          echo "Automated rollback complete. Service restored to deploy $LAST_GOOD_ID."
+          echo "autoDeploy has been disabled — a human must re-enable it after investigating."
           exit 1
