@@ -22,6 +22,11 @@ app.get("/todos", (req, res) => {
 });
 
 app.post("/todos", (req, res) => {
+  // Stand-in for a real DB connection check: in production this would be
+  // "can we reach the database with this connection config", not just APP_NAME.
+  if (!process.env.APP_NAME) {
+    return res.status(500).json({ error: "Storage is unavailable: APP_NAME is not configured" });
+  }
   const { text } = req.body;
   todos = addTodo(todos, text);
   res.status(201).json(todos);
